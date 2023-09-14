@@ -25,7 +25,7 @@ for index, row in data.iterrows():
     meta_price_currency = None if pd.isna(dataRow['metaPrice.currencyCode']) or dataRow[
         'metaPrice.currencyCode'] == 'undefined' else dataRow['metaPrice.currencyCode']
     meta_price_symbol = None if pd.isna(dataRow['metaPrice.symbol']) or dataRow['metaPrice.symbol'] == 'undefined' else \
-    dataRow['metaPrice.symbol']
+        dataRow['metaPrice.symbol']
     meta_price_value = None if pd.isna(dataRow['metaPrice.floatValue']) or dataRow[
         'metaPrice.floatValue'] == 'undefined' else dataRow['metaPrice.floatValue']
     image = None if pd.isna(dataRow['image']) or dataRow['image'] == 'undefined' else dataRow['image']
@@ -50,6 +50,7 @@ for index, row in data.iterrows():
     host_hasLicense = False
     host_license_number = None
     host_Identity_verified = False
+    host_isExperienced = False
     breadcrumbs = None
     location = None
     description_items = None
@@ -81,12 +82,14 @@ for index, row in data.iterrows():
         breadcrumbs = [(b['title'] if 'title' in b.keys() else '') for b in
                        json.loads(dataRow['breadcrumbs'])]
 
-    if len(breadcrumbs) > 0: location = breadcrumbs[-1] if pd.isna(dataRow['location']) or dataRow['location'] == 'undefined' else dataRow['location']
+    if len(breadcrumbs) > 0: location = breadcrumbs[-1] if pd.isna(dataRow['location']) or dataRow[
+        'location'] == 'undefined' else dataRow['location']
     lat = None if pd.isna(dataRow['lat']) or dataRow['lat'] == 'undefined' else dataRow['lat']
     lng = None if pd.isna(dataRow['lng']) or dataRow['lng'] == 'undefined' else dataRow['lng']
 
     guests = None if pd.isna(dataRow['guests']) or dataRow['guests'] == 'undefined' else dataRow['guests']
-    pets_allowed = None if pd.isna(dataRow['pets_allowed']) or dataRow['pets_allowed'] == 'undefined' else dataRow['pets_allowed']
+    pets_allowed = None if pd.isna(dataRow['pets_allowed']) or dataRow['pets_allowed'] == 'undefined' else dataRow[
+        'pets_allowed']
     category = None if pd.isna(dataRow['category']) or dataRow['category'] == 'undefined' else dataRow['category']
 
     if not (pd.isna(dataRow['description_items']) or dataRow['description_items'] == 'undefined'):
@@ -133,17 +136,40 @@ for index, row in data.iterrows():
     highlights = None
     wifi = False
     workspace = False
-
-    print(dataRow['highlights'])
     if not (pd.isna(dataRow['highlights']) or dataRow['highlights'] == 'undefined'):
-        highlights = [highlight['title'] + (' : '+highlight['subtitle'] if 'subtitle' in highlight.keys() else '') for highlight in json.loads(dataRow['highlights'])]
-        for highlight in highlights:
+        highlights = []
+        for h in json.loads(dataRow['highlights']):
+            subtitle = ' : ' + h['subtitle'] if 'subtitle' in h.keys() and h['subtitle'] is not None else ''
+            highlight = h['title'] + subtitle
+            highlights.append(highlight)
             if highlight.find('wifi') > -1:
                 wifi = True
             if highlight.find('workspace') > -1:
                 workspace = True
+            if highlight.find('Experienced host') > -1:
+                host_isExperienced = True
 
-    print(highlights)
-    print(wifi,workspace)
+    neighborhood = None
+    if not (pd.isna(dataRow['neighborhood']) or dataRow['neighborhood'] == 'undefined'):
+        neighborhood = (''.join([item['searchText'] for item in json.loads(dataRow['neighborhood'])])).strip()
+
+    nearbyCities = None
+    if not (pd.isna(dataRow['nearbyCities']) or dataRow['nearbyCities'] == 'undefined'):
+        nearbyCities = [item['title'] for item in json.loads(dataRow['nearbyCities'])]
+
+    arrangement_details = None
+    if not (pd.isna(dataRow['arrangement_details']) or dataRow['arrangement_details'] == 'undefined'):
+        arrangement_details = list(set([item['subtitle'] for item in json.loads(dataRow['arrangement_details'])]))
+
+    amenities = None
+    if not (pd.isna(dataRow['amenities']) or dataRow['amenities'] == 'undefined'):
+        amenities = dataRow['amenities']
+
+    images = None
+    if not (pd.isna(dataRow['images']) or dataRow['images'] == 'undefined'):
+        images = arrangement_details = [item['baseUrl'] for item in json.loads(dataRow['images'])]
+
+    propertyType = None if pd.isna(dataRow['propertyType']) or dataRow['propertyType'] == 'undefined' else dataRow['propertyType']
+    url = None if pd.isna(dataRow['url']) or dataRow['url'] == 'undefined' else dataRow['url']
 
 
