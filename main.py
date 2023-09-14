@@ -7,17 +7,61 @@ directories = [x[0] for x in os.walk("../milestone 1/")]
 
 print(directories[1::])
 
-df = pd.read_csv('../milestone 1/alabama/listings.csv',
-                 usecols=["scrapedAt", "listingId", "title", "metaPrice.currencyCode", "metaPrice.symbol",
-                          "metaPrice.floatValue", "image", "description", "category", "discount", "rating",
-                          "reviewsCount", "seller.badge", "seller.avatar", "seller.features", "seller.tags",
-                          "seller.name", "breadcrumbs", "location", "lat", "lng", "guests", "pets_allowed",
-                          "description_items", "category_rating", "rules", "details", "highlights", "neighborhood",
-                          "nearbyCities", "arrangement_details", "amenities", "images", "propertyType", "url"],
-                 sep=';', encoding='utf-8')
+listings = pd.read_csv('../milestone 1/alabama/listings.csv',
+                       usecols=["scrapedAt", "listingId", "title", "metaPrice.currencyCode", "metaPrice.symbol",
+                                "metaPrice.floatValue", "image", "description", "category", "discount", "rating",
+                                "reviewsCount", "seller.badge", "seller.avatar", "seller.features", "seller.tags",
+                                "seller.name", "breadcrumbs", "location", "lat", "lng", "guests", "pets_allowed",
+                                "description_items", "category_rating", "rules", "details", "highlights",
+                                "neighborhood",
+                                "nearbyCities", "arrangement_details", "amenities", "images", "propertyType", "url"],
+                       sep=';', encoding='utf-8')
 
-data = df
-for index, row in data.iterrows():
+reviews = pd.read_csv('../milestone 1/alabama/reviews.csv',
+                      usecols=["scrapedAt", "listingId", "text", "customerId", "customerName",
+                               "year", "month"],
+                      sep=';', encoding='utf-8')
+
+grouped_reviews = reviews.groupby('listingId')['text'].apply(list).reset_index()
+
+
+def get_reviews_by_listing_id(listing_id):
+    matching_reviews = grouped_reviews[grouped_reviews['listingId'] == listing_id]['text'].tolist()
+    if not matching_reviews:
+        return None
+    return matching_reviews[0][0]
+
+
+prices = pd.read_csv('../milestone 1/alabama/prices.csv',
+                     usecols=["scrapedAt", "listingId", "currencyCode", "symbol", "floatValue"],
+                     sep=';', encoding='utf-8')
+
+
+def get_reviews_by_id(listing_id):
+    matching_reviews = grouped_reviews[grouped_reviews['listingId'] == listing_id]['text'].tolist()
+    if not matching_reviews:
+        return None
+
+    flattened_reviews = [review for sublist in matching_reviews for review in sublist]
+    return flattened_reviews
+
+
+def get_price_info_by_listing_id(listing_id):
+    merged_data = pd.merge(listings, prices, on='listingId', how='left')
+    matching_row = merged_data[merged_data['listingId'] == listing_id]
+
+    if not matching_row.empty:
+        price_info = {
+            'floatValue': matching_row['floatValue'].iloc[0],
+            'currency': matching_row['currencyCode'].iloc[0],
+            'symbol': matching_row['symbol'].iloc[0]
+        }
+        return price_info
+    else:
+        return None
+
+
+def formatting(row):
     dataRow = row.to_dict()
 
     listingId = None if pd.isna(dataRow['listingId']) or dataRow['listingId'] == 'undefined' else dataRow['listingId']
@@ -30,7 +74,7 @@ for index, row in data.iterrows():
         'metaPrice.floatValue'] == 'undefined' else dataRow['metaPrice.floatValue']
     image = None if pd.isna(dataRow['image']) or dataRow['image'] == 'undefined' else dataRow['image']
     description = None if pd.isna(dataRow['description']) or dataRow['description'] == 'undefined' else dataRow[
-        'description']
+        'description'].replace('<br />', ' ')
     category = None if pd.isna(dataRow['category']) or dataRow['category'] == 'undefined' else dataRow['category']
     discount = None if pd.isna(dataRow['discount']) or dataRow['discount'] == 'undefined' else dataRow['discount']
     rating = None if pd.isna(dataRow['rating']) or dataRow['rating'] == 'undefined' else dataRow['rating']
@@ -169,7 +213,80 @@ for index, row in data.iterrows():
     if not (pd.isna(dataRow['images']) or dataRow['images'] == 'undefined'):
         images = arrangement_details = [item['baseUrl'] for item in json.loads(dataRow['images'])]
 
-    propertyType = None if pd.isna(dataRow['propertyType']) or dataRow['propertyType'] == 'undefined' else dataRow['propertyType']
+    propertyType = None if pd.isna(dataRow['propertyType']) or dataRow['propertyType'] == 'undefined' else dataRow[
+        'propertyType']
     url = None if pd.isna(dataRow['url']) or dataRow['url'] == 'undefined' else dataRow['url']
 
+    listingReviews = get_reviews_by_id(listingId)
 
+    price = get_price_info_by_listing_id(listingId)
+    fieldnames = ['listingId', 'title', 'price_currency', 'price_symbol', 'price_value', 'meta_price_currency', 'meta_price_symbol', 'meta_price_value', 'image',
+                  'description', 'category', 'discount', 'rating', 'reviews_count', 'host_badge', 'host_avatar', 'host_name', 'host_languages',
+                  'host_response_rate',
+                  'host_response_time', 'host_reviews_count', 'host_airbnb_supporter', 'host_hasLicense',
+                  'host_license_number', 'host_Identity_verified',
+                  'host_isExperienced', 'breadcrumbs', 'location', 'description_items', 'beds', 'baths', 'bedrooms',
+                  'lat',
+                  'lng', 'guests', 'pets_allowed', 'category',
+                  'AccuracyRating', 'CheckinRating', 'CleanlinessRating', 'CommunicationRating', 'LocationRating',
+                  'ValueRating', 'rules', 'details',
+                  'highlights', 'wifi', 'workspace', 'neighborhood', 'nearbyCities', 'arrangement_details', 'amenities',
+                  'images', 'propertyType', 'url', 'reviews']
+    csvRow = {
+        'listingId': listingId,
+        'title': title,
+        'price_currency': price['currencyCode'],
+        'price_symbol': price['symbol'],
+        'price_value': price['floatValue'],
+        'meta_price_currency': meta_price_currency,
+        'meta_price_symbol': meta_price_symbol,
+        'meta_price_value': meta_price_value,
+        'description': description,
+        'category': category,
+        'discount': discount,
+        'rating': rating,
+        'reviews_count': reviews_count,
+        'host_badge': host_badge,
+        'host_avatar': host_avatar,
+        'host_name': host_name,
+        'host_languages': host_languages,
+        'host_response_rate': host_response_rate,
+        'host_response_time': host_response_time,
+        'host_reviews_count': host_reviews_count,
+        'host_airbnb_supporter': host_airbnb_supporter,
+        'host_hasLicense': host_hasLicense,
+        'host_license_number': host_license_number,
+        'host_Identity_verified': host_Identity_verified,
+        'host_isExperienced': host_isExperienced,
+        'breadcrumbs': breadcrumbs,
+        'location': location,
+        'description_items': description_items,
+        'beds': breadcrumbs,
+        'baths': breadcrumbs,
+        'lat': lat,
+        'lng': lng,
+        'guests': guests,
+        'pets_allowed': pets_allowed,
+        'AccuracyRating': AccuracyRating,
+        'CheckinRating': CheckinRating,
+        'CleanlinessRating': CleanlinessRating,
+        'CommunicationRating': CommunicationRating,
+        'LocationRating': LocationRating,
+        'ValueRating': ValueRating,
+        'rules': rules,
+        'details': details,
+        'highlights': highlights,
+        'wifi': wifi,
+        'workspace': workspace,
+        'neighborhood': neighborhood,
+        'nearbyCities': nearbyCities,
+        'arrangement_details': arrangement_details,
+        'amenities': amenities,
+        'images': images,
+        'propertyType': propertyType,
+        'url': url,
+        'reviews': listingReviews
+    }
+
+
+listings.apply(lambda row: formatting(row), axis=1)
