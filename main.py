@@ -225,7 +225,7 @@ for folder in milestones:
             arrangement_details = None
             if not (pd.isna(dataRow['arrangement_details']) or dataRow['arrangement_details'] == 'undefined'):
                 arrangement_details = list(
-                    set([item['subtitle'] for item in json.loads(dataRow['arrangement_details'])]))
+                    {item['subtitle'] for item in json.loads(dataRow['arrangement_details'])})
 
             amenities = None
             if not (pd.isna(dataRow['amenities']) or dataRow['amenities'] == 'undefined'):
